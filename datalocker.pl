@@ -16,11 +16,7 @@ use Proc::ProcessTable;
 use List::Util qw(first);
 use Log::Log4perl;
 
-my $BASE_DIR;
-my $DEBUG = 1;
-
-Log::Log4perl->init($BASE_DIR . "/.logconf");
-my $logger = Log::Log4perl->get_logger(__PACKAGE__);
+my ($BASE_DIR, $logger);
 
 # Given a string of content data, return a path (as a list) that provides a
 # filename-safe base64 encoded SHA256 digest of the content, with two levels
@@ -234,6 +230,8 @@ sub update_url_list {
 
 sub run {
     $BASE_DIR = $ARGV[0] || '/tmp/datalocker';
+    Log::Log4perl->init($BASE_DIR . "/.logconf");
+    $logger = Log::Log4perl->get_logger(__PACKAGE__);
 
     my $urlfile = $BASE_DIR . '/.urllist';
     open URLFILE, $urlfile
