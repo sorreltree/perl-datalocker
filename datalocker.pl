@@ -14,9 +14,13 @@ use DateTime;
 use URI::URL;
 use Proc::ProcessTable;
 use List::Util qw(first);
+use Log::Log4perl;
 
 my $BASE_DIR;
 my $DEBUG = 1;
+
+Log::Log4perl->init($BASE_DIR . "/.logconf");
+my $logger = Log::Log4perl->get_logger(__PACKAGE__);
 
 # Given a string of content data, return a path (as a list) that provides a
 # filename-safe base64 encoded SHA256 digest of the content, with two levels
@@ -152,8 +156,8 @@ sub lock_url {
             if (DateTime->now()->subtract( minutes => 3 ) < $lock_mtime) {
                 # The PID in the lockfile is young enough that work may still
                 # be going on.  Refuse the lock.
-                print STDERR "Lock on $lockfile by $$ failed -- " .
-                    "file locked by $lockpid\n" if $DEBUG;
+                $logger->debug("Lock on $lockfile by $$ failed -- " .
+                               "file locked by $lockpid\n");
                 return 0;
             } else {
                 # The old lock is more than three minutes old. Kill it and
@@ -180,9 +184,8 @@ sub unlock_url {
     my $lockfile = lock_file_path($url);
 
     if ( ! -r $lockfile ) {
-        print STDERR 
-            "Unlock on $lockfile by PID $$ failed " .
-            "because lockfile was already removed.\n" if $DEBUG;
+        $logger->debug("Unlock on $lockfile by PID $$ failed " .
+                       "because lockfile was already removed.\n");
         return;
     }
 
@@ -196,9 +199,8 @@ sub unlock_url {
         unlink $lockfile;
         return;
     } else {
-        print STDERR
-            "Unlock on $lockfile by PID $$ failed " .
-            "because someone else has the lock!\n" if $DEBUG;
+        $logger->debug("Unlock on $lockfile by PID $$ failed " .
+                       "because someone else has the lock!\n");
         return;
     }
 }
@@ -207,19 +209,19 @@ sub unlock_url {
 sub update_url_list {
     foreach (@_) {
         my $url = $_;
-        print STDERR "Working on url = $url\n" if $DEBUG;
+        $logger->debug("Working on url = $url\n");
 
         if (lock_url($url)) {
             my $ua = LWP::UserAgent->new( keep_alive => 10 );
             my $response = $ua->get(
                 $url, 'If-Modified-Since' => if_modified_since_header($url));
             if ($response->code == 304) {
-                print STDERR
+                $logger->info(
                     "URL $url has not been modified since last fetch: " .
-                    $response->status_line . "\n";
+                    $response->status_line . "\n");
             } elsif ($response->is_error) {
-                print STDERR "URL $url returned an error: ".
-                    $response->status_line . "\n";
+                $logger->info("URL $url returned an error: ".
+                              $response->status_line . "\n");
             } else { 
                 my $storepath = store_content($response->content);
                 make_source_datetime_link($storepath, $url);
