@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 package Local::DataLocker;
 
@@ -214,7 +214,11 @@ sub update_url_list {
             my $response = $ua->get(
                 $url, 'If-Modified-Since' => if_modified_since_header($url));
             if ($response->code == 304) {
-                print STDERR "URL has not been modified since last fetch: " .
+                print STDERR
+                    "URL $url has not been modified since last fetch: " .
+                    $response->status_line . "\n";
+            } elsif ($response->is_error) {
+                print STDERR "URL $url returned an error: ".
                     $response->status_line . "\n";
             } else { 
                 my $storepath = store_content($response->content);
