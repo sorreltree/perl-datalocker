@@ -209,6 +209,7 @@ sub update_url_list {
 
         if (lock_url($url)) {
             my $ua = LWP::UserAgent->new( keep_alive => 10 );
+            $ua->timeout(30);
             my $response = $ua->get(
                 $url, 'If-Modified-Since' => if_modified_since_header($url));
             if ($response->code == 304) {
